@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matchmaking Systems - Memory Match Club Pro</title>
+  
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Firebase Compat CDNs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #06060c;
+      --bg-card: rgba(12, 12, 26, 0.75);
+      --border-glow: rgba(0, 240, 255, 0.15);
+      --neon-blue: #00f0ff;
+      --neon-purple: #bd00ff;
+      --neon-pink: #ff007f;
+      --gold: #ffd700;
+      --success: #39ff14;
+      --error: #ff3131;
+      --font-display: 'Orbitron', sans-serif;
+      --font-primary: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(189, 0, 255, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(0, 240, 255, 0.12) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: #ffffff;
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    header {
+      background: rgba(10, 10, 20, 0.85);
+      border-bottom: 1px solid var(--border-glow);
+      backdrop-filter: blur(12px);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 1.35rem;
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .nav-logo span {
+      background: linear-gradient(45deg, var(--neon-blue), var(--neon-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stat-badge {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 8px 16px;
+      border-radius: 50px;
+      border: 1px solid var(--border-glow);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .stat-badge i {
+      color: var(--gold);
+    }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 10;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-glow);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+    }
+
+    /* Selection Section */
+    .arena-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+      margin-top: 20px;
+    }
+
+    .mode-card {
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 220px;
+    }
+
+    .mode-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--neon-blue);
+      box-shadow: 0 8px 24px rgba(0, 240, 255, 0.15);
+    }
+
+    .mode-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .mode-tag {
+      font-size: 0.75rem;
+      background: rgba(0, 240, 255, 0.1);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: var(--font-display);
+      color: var(--neon-blue);
+      font-weight: 700;
+    }
+
+    .mode-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+    }
+
+    .mode-card p {
+      font-size: 0.85rem;
+      color: #a0a0b0;
+      line-height: 1.4;
+      flex-grow: 1;
+    }
+
+    .mode-footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 14px;
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .prize-label {
+      font-size: 0.7rem;
+      color: #a0a0b0;
+      text-transform: uppercase;
+    }
+
+    .prize-value {
+      font-size: 1.15rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .btn-cyber {
+      background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+    }
+
+    .btn-cyber:hover {
+      box-shadow: 0 0 15px rgba(189, 0, 255, 0.5);
+    }
+
+    /* Radar/Search Section (Hidden initially) */
+    .radar-container {
+      display: none;
+      text-align: center;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .radar-circle {
+      width: 180px;
+      height: 180px;
+      border: 2px solid var(--neon-blue);
+      border-radius: 50%;
+      position: relative;
+      margin: 32px auto;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+    }
+
+    .radar-circle::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border: 1px solid var(--neon-purple);
+      border-radius: 50%;
+      animation: ping 2s infinite linear;
+    }
+
+    @keyframes ping {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    .radar-sweeper {
+      width: 50%;
+      height: 50%;
+      background: linear-gradient(45deg, rgba(0, 240, 255, 0.4), transparent);
+      transform-origin: bottom right;
+      position: absolute;
+      top: 0; left: 0;
+      border-radius: 100% 0 0 0;
+      animation: sweep 2.5s infinite linear;
+    }
+
+    @keyframes sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .countdown-text {
+      font-size: 3rem;
+      font-family: var(--font-display);
+      font-weight: 900;
+      color: var(--neon-pink);
+      text-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER NAVIGATION BAR -->
+  <header>
+    <a href="home.html" class="nav-logo">
+      <i class="fa-solid fa-brain"></i> <span>MMC Pro</span>
+    </a>
+    <div class="nav-stats">
+      <a href="buy-coins.html" class="stat-badge">
+        <i class="fa-solid fa-coins"></i>
+        <span id="nav-coins">0</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN WINDOW CONTENT -->
+  <main>
+    
+    <!-- MODE SELECTION INTERFACE -->
+    <div id="selection-view">
+      <div class="glass-card" style="text-align: center;">
+        <h2 style="font-family: var(--font-display); letter-spacing: 0.5px;">BATTLE ARENAS</h2>
+        <p style="color: #a0a0b0; font-size: 0.9rem; margin-top: 4px;">Choose your challenge configuration matrix.</p>
+      </div>
+
+      <div id="modes-grid" class="arena-grid">
+        <!-- Dynamically Populated Modes Cards -->
+        <p style="text-align: center; grid-column: 1/-1; color: #777;">Loading system modes config...</p>
+      </div>
+    </div>
+
+    <!-- RADAR SEARCH PROTOCOL SCREEN -->
+    <div id="radar-view" class="radar-container glass-card">
+      <h2 style="font-family: var(--font-display); letter-spacing: 1px; color: var(--neon-blue);">SEARCHING NODES</h2>
+      
+      <div class="radar-circle">
+        <div class="radar-sweeper"></div>
+      </div>
+
+      <p id="match-status-label" style="font-family: monospace; font-size: 0.9rem; color: #a0a0b0;">Initializing Quantum Handshake...</p>
+      <div id="countdown-number" class="countdown-text">10</div>
+
+      <button class="btn-cyber" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-glow);" onclick="cancelMatchmaking()">
+        Disconnect Search
+      </button>
+    </div>
+
+  </main>
+
+  <!-- Core Firebase Configuration -->
+  <script src="js/firebase-config.js"></script>
+
+  <script>
+    let currentUser = null;
+    let gameModesList = {};
+    let activeMatchmakingTimer = null;
+    let selectedModeId = null;
+    let matchmakingTicketRef = null;
+
+    // --- Dynamic Session Watcher ---
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        db.ref(`users/${user.uid}`).on('value', snap => {
+          if (snap.exists()) {
+            currentUser = snap.val();
+            document.getElementById('nav-coins').innerText = currentUser.coins || 0;
+          }
+        });
+
+        // ডাইনামিক গেম মোড লোডার
+        db.ref('gameModes').on('value', snap => {
+          if (snap.exists()) {
+            gameModesList = snap.val();
+            renderGameModes();
+          }
+        });
+
+      } else {
+        window.location.href = 'auth.html';
+      }
+    });
+
+    // --- Dynamic Game Modes Renderer ---
+    function renderGameModes() {
+      const grid = document.getElementById('modes-grid');
+      grid.innerHTML = '';
+
+      Object.keys(gameModesList).forEach(key => {
+        const mode = gameModesList[key];
+        if (mode.status !== 'active') return; // ইনঅ্যাক্টিভ মোডগুলো স্কিপ করা হবে
+
+        const card = document.createElement('div');
+        card.className = 'glass-card mode-card';
+        card.innerHTML = `
+          <div>
+            <div class="mode-header">
+              <span class="mode-tag">PRIMED</span>
+              <span style="font-size:0.8rem; color:var(--neon-pink); font-family: monospace;"><i class="fa-solid fa-clone"></i> ${mode.cardCount} Cards</span>
+            </div>
+            <h3>${mode.modeName}</h3>
+            <p>Access Cost requires verification of ${mode.entryFee} coins. Defeat the matrix opponent to extract rewards.</p>
+          </div>
+          <div class="mode-footer">
+            <div>
+              <div class="prize-label">Est Reward</div>
+              <div class="prize-value">${mode.winningReward} c</div>
+            </div>
+            <button class="btn-cyber" onclick="startSearch('${key}')">Initialize Arena</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // --- START SEARCH PROTOCOLS ---
+    function startSearch(modeId) {
+      if (!currentUser) return;
+      const mode = gameModesList[modeId];
+      if (!mode) return;
+
+      // ১. ব্যালেন্স ইন্টিগ্রিটি চেক
+      if (currentUser.coins < mode.entryFee) {
+        alert('Access Denied: Insufficient dynamic coins balance for arena entry.');
+        return;
+      }
+
+      selectedModeId = modeId;
+      
+      // ভিজ্যুয়াল ভিউ এক্সচেঞ্জ
+      document.getElementById('selection-view').style.display = 'none';
+      document.getElementById('radar-view').style.display = 'block';
+
+      // ২. রাডার এন্ট্রি টিকেট জেনারেশন
+      matchmakingTicketRef = db.ref(`matchmaking/${modeId}/${currentUser.uid}`);
+      matchmakingTicketRef.set({
+        uid: currentUser.uid,
+        name: currentUser.fullName,
+        time: firebase.database.ServerValue.TIMESTAMP
+      });
+
+      let sec = 10;
+      document.getElementById('countdown-number').innerText = sec;
+      document.getElementById('match-status-label').innerText = "Probing node matrix for active peers...";
+
+      // ৩. কাউন্টডাউন এবং রিয়েল-টাইম সার্চ লুপ
+      activeMatchmakingTimer = setInterval(() => {
+        sec--;
+        document.getElementById('countdown-number').innerText = sec;
+
+        // স্ট্যাটাস চেইঞ্জ ইফেক্ট
+        if (sec === 7) document.getElementById('match-status-label').innerText = "Resolving gateway routes...";
+        if (sec === 4) document.getElementById('match-status-label').innerText = "Syncing network latency...";
+        if (sec === 2) document.getElementById('match-status-label').innerText = "Spawning local virtual Bot agent...";
+
+        if (sec <= 0) {
+          clearInterval(activeMatchmakingTimer);
+          allocateBotMatch(); // কোনো রিয়্যাল প্লেয়ার না পেলে স্বয়ংক্রিয়ভাবে বটের সাথে ম্যাচ মেকিং সম্পন্ন হবে
+        }
+      }, 1000);
+
+      // ৪. লাইভ ম্যাচ লিসেনার (যদি অন্য কোনো প্লেয়ার এই কিউতে জয়েন করে)
+      db.ref(`matchmaking/${modeId}`).on('value', snap => {
+        if (!snap.exists()) return;
+        
+        let opponent = null;
+        snap.forEach(child => {
+          if (child.key !== currentUser.uid) {
+            opponent = child.val();
+          }
+        });
+
+        if (opponent) {
+          // রিয়েল প্লেয়ার ম্যাচ অ্যালোকেশন
+          clearInterval(activeMatchmakingTimer);
+          allocateLivePlayerMatch(opponent);
+        }
+      });
+    }
+
+    // --- ALLOCATE LIVE MULTIPLAYER GAME ---
+    function allocateLivePlayerMatch(opponent) {
+      // টিকিট রিমুভ করা হচ্ছে
+      matchmakingTicketRef.remove();
+      db.ref(`matchmaking/${selectedModeId}/${opponent.uid}`).remove();
+
+      const matchId = 'MATCH-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const mode = gameModesList[selectedModeId];
+
+      // ম্যাচ সেশন এন্ট্রি
+      db.ref(`matches/${matchId}`).set({
+        matchId: matchId,
+        modeId: selectedModeId,
+        modeName: mode.modeName,
+        player1: currentUser.uid,
+        player2: opponent.uid,
+        status: 'starting',
+        created: firebase.database.ServerValue.TIMESTAMP
+      }).then(() => {
+        window.location.href = `game.html?matchId=${matchId}&opponent=player&role=p1`;
+      });
+    }
+
+    // --- ALLOCATE SINGLE PLAYER BOT GAME ---
+    function allocateBotMatch() {
+      if (matchmakingTicketRef) matchmakingTicketRef.remove();
+      
+      const matchId = 'MATCH-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const mode = gameModesList[selectedModeId];
+      const completedMatches = currentUser.matchesPlayed || 0;
+
+      // প্রথম ৪টি ম্যাচ 'easy' বট, এর পর 'genius' লেভেলের বট এসাইন করা হবে
+      const botDiff = completedMatches < 4 ? 'easy' : 'genius';
+
+      window.location.href = `game.html?matchId=${matchId}&opponent=bot&difficulty=${botDiff}&modeId=${selectedModeId}`;
+    }
+
+    // --- CANCEL REGISTRY ---
+    function cancelMatchmaking() {
+      if (matchmakingTicketRef) matchmakingTicketRef.remove();
+      if (activeMatchmakingTimer) clearInterval(activeMatchmakingTimer);
+      
+      // ডাইনামিকালি মেইন সিলেকশন স্ক্রিনে রিটার্ন করা হচ্ছে
+      document.getElementById('radar-view').style.display = 'none';
+      document.getElementById('selection-view').style.display = 'block';
+      db.ref(`matchmaking/${selectedModeId}`).off();
+    }
+  </script>
+</body>
+</html>
