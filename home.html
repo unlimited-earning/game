@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Command Deck - Memory Match Club Pro</title>
+  
+  <!-- Google Fonts & FontAwesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Firebase Compat CDNs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #06060c;
+      --bg-card: rgba(12, 12, 26, 0.75);
+      --border-glow: rgba(0, 240, 255, 0.15);
+      --neon-blue: #00f0ff;
+      --neon-purple: #bd00ff;
+      --neon-pink: #ff007f;
+      --gold: #ffd700;
+      --success: #39ff14;
+      --error: #ff3131;
+      --font-display: 'Orbitron', sans-serif;
+      --font-primary: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(189, 0, 255, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(0, 240, 255, 0.12) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: #ffffff;
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Background Particle Mesh Grid */
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: linear-gradient(rgba(18, 16, 35, 0.4) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(18, 16, 35, 0.4) 1px, transparent 1px);
+      background-size: 30px 30px;
+      z-index: 0;
+    }
+
+    header {
+      background: rgba(10, 10, 20, 0.85);
+      border-bottom: 1px solid var(--border-glow);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-logo {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 1.35rem;
+      text-decoration: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-logo span {
+      background: linear-gradient(45deg, var(--neon-blue), var(--neon-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-stats {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .stat-badge {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 8px 16px;
+      border-radius: 50px;
+      border: 1px solid var(--border-glow);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      text-decoration: none;
+      color: #fff;
+      transition: all 0.3s;
+    }
+
+    .stat-badge i.fa-coins {
+      color: var(--gold);
+    }
+
+    .notif-btn {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .notif-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 10px;
+      height: 10px;
+      background: var(--neon-pink);
+      border-radius: 50%;
+      border: 2px solid var(--bg-dark);
+      display: none;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-glow);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+    }
+
+    .deck-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .btn-cyber {
+      background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-cyber:hover:not(:disabled) {
+      box-shadow: 0 0 15px rgba(189, 0, 255, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-cyber:disabled {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-glow);
+      color: #666;
+      cursor: not-allowed;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .menu-card {
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .menu-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--neon-blue);
+      box-shadow: 0 12px 24px rgba(0, 240, 255, 0.15);
+    }
+
+    .menu-card i {
+      font-size: 2.2rem;
+      background: linear-gradient(45deg, var(--neon-blue), var(--neon-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+    }
+
+    .menu-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .menu-card p {
+      font-size: 0.85rem;
+      color: #a0a0b0;
+      line-height: 1.4;
+    }
+
+    /* Admin Action Button */
+    .admin-indicator {
+      display: none;
+      background: rgba(255, 0, 127, 0.1);
+      border: 1px solid var(--neon-pink);
+      color: var(--neon-pink);
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER NAVIGATION BAR -->
+  <header>
+    <a href="home.html" class="nav-logo">
+      <i class="fa-solid fa-brain"></i> <span>MMC Pro</span>
+    </a>
+    <div class="nav-stats">
+      <!-- Admin Controller Badge inside nav -->
+      <a href="admin-dashboard.html" id="admin-badge" class="stat-badge" style="display: none; border-color: var(--neon-pink); color: var(--neon-pink);">
+        <i class="fa-solid fa-user-shield" style="color: var(--neon-pink);"></i> Admin Panel
+      </a>
+      <!-- Capital Coins Badge -->
+      <a href="buy-coins.html" class="stat-badge">
+        <i class="fa-solid fa-coins"></i>
+        <span id="nav-coins">0</span>
+      </a>
+      <!-- Dynamic Notifications Bell -->
+      <a href="notifications.html" class="stat-badge notif-btn">
+        <i class="fa-solid fa-bell"></i>
+        <span id="notif-badge" class="notif-badge"></span>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN OPERATOR AREA -->
+  <main>
+    
+    <!-- COMMAND DECK HEADER -->
+    <div class="glass-card">
+      <div class="deck-header">
+        <div>
+          <h1 style="font-family: var(--font-display); font-size: 1.8rem; letter-spacing: 0.5px;">
+            Operator: <span id="lbl-name" style="color: var(--neon-blue);">...</span>
+          </h1>
+          <p style="color: #a0a0b0; font-size: 0.9rem; margin-top: 4px;">Dynamic system status: <span style="color: var(--success); font-weight: bold;">PRIMED</span></p>
+        </div>
+        <div>
+          <button id="btn-daily" class="btn-cyber" onclick="claimDailyReward()">
+            <i class="fa-solid fa-gift"></i> Claim Daily Incentive (+12c)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODULE MENU GRID -->
+    <div class="menu-grid">
+      <!-- PLAY ARENA -->
+      <a href="matchmaking.html" class="glass-card menu-card">
+        <i class="fa-solid fa-gamepad"></i>
+        <h3>Play Game</h3>
+        <p>Match with online global network players or train with our Genius Bot AI core.</p>
+      </a>
+
+      <!-- BUY COINS -->
+      <a href="buy-coins.html" class="glass-card menu-card">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <h3>Buy Coins</h3>
+        <p>Acquire digital capital tokens securely using bKash/Nagad transactional gateways.</p>
+      </a>
+
+      <!-- WITHDRAW -->
+      <a href="withdraw.html" class="glass-card menu-card">
+        <i class="fa-solid fa-money-bill-transfer"></i>
+        <h3>Withdraw</h3>
+        <p>Submit request vectors to clear your token assets into real mobile banking cash payouts.</p>
+      </a>
+
+      <!-- REFERRAL -->
+      <a href="referral.html" class="glass-card menu-card">
+        <i class="fa-solid fa-network-wired"></i>
+        <h3>Referral</h3>
+        <p>Acquire high-value coin commissions by inviting external nodes to the security network.</p>
+      </a>
+
+      <!-- LEADERBOARD -->
+      <a href="leaderboard.html" class="glass-card menu-card">
+        <i class="fa-solid fa-trophy"></i>
+        <h3>Leaderboard</h3>
+        <p>Inspect active operator nodes ranked by wins, match performance and coin capital.</p>
+      </a>
+
+      <!-- HISTORY -->
+      <a href="history.html" class="glass-card menu-card">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <h3>History</h3>
+        <p>View complete transaction registers, historical match diagnostics and logs.</p>
+      </a>
+
+      <!-- PROFILE -->
+      <a href="profile.html" class="glass-card menu-card">
+        <i class="fa-solid fa-user-gear"></i>
+        <h3>Profile</h3>
+        <p>Access profile settings, credential keys, match record indices and statistics.</p>
+      </a>
+
+      <!-- LOGOUT -->
+      <div onclick="handleLogout()" class="glass-card menu-card">
+        <i class="fa-solid fa-power-off" style="background: linear-gradient(45deg, var(--neon-pink), var(--error)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
+        <h3>Disconnect Session</h3>
+        <p>De-authorize this console node and clear current session cookies immediately.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Core Firebase Configuration -->
+  <script src="js/firebase-config.js"></script>
+
+  <script>
+    let currentUser = null;
+    let systemSettings = null;
+    let dailyTimerInterval = null;
+
+    // --- Dynamic Auth and Sync Core ---
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        // ১. রিয়েল-টাইম ডাটাবেস থেকে ইউজার ডাটা রিড করা
+        db.ref(`users/${user.uid}`).on('value', snap => {
+          if (snap.exists()) {
+            currentUser = snap.val();
+
+            // চেক করা হচ্ছে ইউজার ব্যান্ড কিনা
+            if (currentUser.status === 'banned') {
+              alert('Access Blocked: Your operator node has been blacklisted.');
+              handleLogout();
+              return;
+            }
+
+            // ইন্টারফেস আপডেট
+            document.getElementById('lbl-name').innerText = currentUser.fullName;
+            document.getElementById('nav-coins').innerText = currentUser.coins || 0;
+
+            // অ্যাডমিন প্রিভিলেজ থাকলে স্পেশাল ব্যাজ অন করা
+            if (currentUser.role === 'admin') {
+              document.getElementById('admin-badge').style.display = 'flex';
+            }
+
+            // ডেইলি বোনাস রিয়্যাল-টাইম ভেরিফিকেশন
+            initializeDailyBonusCountdown();
+          }
+        });
+
+        // ২. রিয়্যাল-টাইম আনরিড নোটিফিকেশন সিঙ্ক
+        db.ref(`notifications/${user.uid}`).on('value', snap => {
+          let hasUnread = false;
+          snap.forEach(child => {
+            if (child.val().read === false) {
+              hasUnread = true;
+            }
+          });
+          document.getElementById('notif-badge').style.display = hasUnread ? 'block' : 'none';
+        });
+
+        // ৩. গ্লোবাল সিস্টেম সেটিংস লোড করা
+        db.ref('settings').on('value', snap => {
+          if (snap.exists()) {
+            systemSettings = snap.val();
+          }
+        });
+
+      } else {
+        window.location.href = 'auth.html';
+      }
+    });
+
+    // --- DAILY LOGIN BONUS CONTROLLER ---
+    function initializeDailyBonusCountdown() {
+      if (dailyTimerInterval) clearInterval(dailyTimerInterval);
+
+      const checkTime = () => {
+        const lastClaim = currentUser.lastDailyBonusTime || 0;
+        const now = Date.now();
+        const difference = now - lastClaim;
+        const oneDayMs = 24 * 60 * 60 * 1000;
+
+        const btn = document.getElementById('btn-daily');
+        if (difference >= oneDayMs) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-gift"></i> Claim Daily Incentive (+12c)`;
+        } else {
+          btn.disabled = true;
+          const remaining = oneDayMs - difference;
+          
+          const hours = Math.floor(remaining / (1000 * 60 * 60));
+          const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+          
+          btn.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Next Claim: ${hours}h ${minutes}m ${seconds}s`;
+        }
+      };
+
+      checkTime();
+      dailyTimerInterval = setInterval(checkTime, 1000);
+    }
+
+    function claimDailyReward() {
+      if (!currentUser) return;
+      const lastClaim = currentUser.lastDailyBonusTime || 0;
+      const now = Date.now();
+      const oneDayMs = 24 * 60 * 60 * 1000;
+
+      if (now - lastClaim < oneDayMs) return;
+
+      const incrementVal = (systemSettings && systemSettings.dailyBonus) ? systemSettings.dailyBonus : 12;
+
+      // ডাটাবেসে আপগ্রেড ট্রান্সমিশন
+      db.ref(`users/${currentUser.uid}`).update({
+        coins: firebase.database.ServerValue.increment(incrementVal),
+        lastDailyBonusTime: firebase.database.ServerValue.TIMESTAMP
+      }).then(() => {
+        // ১. ট্রানজ্যাকশন হিস্ট্রি রাইট
+        const txKey = db.ref().child('transactions').push().key;
+        db.ref(`transactions/${txKey}`).set({
+          txId: txKey,
+          uid: currentUser.uid,
+          description: "Incentive claimed: Daily Login Bonus",
+          amount: incrementVal,
+          type: "credit",
+          time: firebase.database.ServerValue.TIMESTAMP
+        });
+
+        // ২. নোটিফিকেশন রাইট
+        const notifKey = db.ref().child(`notifications/${currentUser.uid}`).push().key;
+        db.ref(`notifications/${currentUser.uid}/${notifKey}`).set({
+          id: notifKey,
+          title: "System Credits Issued",
+          message: `${incrementVal} Coins successfully wired to your wallet for daily node sync.`,
+          time: firebase.database.ServerValue.TIMESTAMP,
+          read: false
+        });
+
+        alert(`Daily reward of ${incrementVal} coins claimed successfully!`);
+      }).catch(err => alert(err.message));
+    }
+
+    // --- SESSION EXIT ---
+    function handleLogout() {
+      if (confirm('Verify: Terminate security session?')) {
+        if (dailyTimerInterval) clearInterval(dailyTimerInterval);
+        auth.signOut().then(() => {
+          window.location.href = 'auth.html';
+        });
+      }
+    }
+  </script>
+</body>
+</html>
