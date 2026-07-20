@@ -1,1 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Match Club Pro - System Core</title>
+  
+  <!-- Google Fonts & FontAwesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Firebase Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
+  <style>
+    :root {
+      --bg-dark: #06060c;
+      --neon-blue: #00f0ff;
+      --neon-purple: #bd00ff;
+      --neon-pink: #ff007f;
+      --font-display: 'Orbitron', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(189, 0, 255, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(0, 240, 255, 0.12) 0px, transparent 50%);
+      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Background Particle Grid */
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: linear-gradient(rgba(18, 16, 35, 0.4) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(18, 16, 35, 0.4) 1px, transparent 1px);
+      background-size: 30px 30px;
+      z-index: 1;
+    }
+
+    .preloader-container {
+      text-align: center;
+      position: relative;
+      z-index: 10;
+    }
+
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      background: linear-gradient(45deg, var(--neon-blue), var(--neon-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 24px;
+      animation: logoGlow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes logoGlow {
+      from { 
+        text-shadow: 0 0 10px rgba(0, 240, 255, 0.3), 0 0 20px rgba(0, 240, 255, 0.2); 
+      }
+      to { 
+        text-shadow: 0 0 25px rgba(0, 240, 255, 0.8), 0 0 40px rgba(189, 0, 255, 0.5); 
+      }
+    }
+
+    .loader-bar-bg {
+      width: 280px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+      margin: 0 auto;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .loader-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+      box-shadow: 0 0 10px var(--neon-blue);
+      transition: width 0.1s linear;
+    }
+
+    .status-text {
+      font-family: monospace;
+      color: var(--neon-blue);
+      font-size: 0.85rem;
+      margin-top: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="preloader-container">
+    <div class="logo-text">MMC PRO SYSTEM</div>
+    <div class="loader-bar-bg">
+      <div id="loader-fill" class="loader-bar-fill"></div>
+    </div>
+    <div id="status-label" class="status-text">INITIALIZING QUANTUM GATEWAY...</div>
+  </div>
+
+  <!-- Firebase Config Reference -->
+  <script src="js/firebase-config.js"></script>
+
+  <script>
+    // URL থেকে রেফারাল কোড চেক করে সেশন স্টোরেজে সংরক্ষণ করা হচ্ছে
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    if (refCode) {
+      sessionStorage.setItem('pendingReferral', refCode.trim().toUpperCase());
+    }
+
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      progress += Math.floor(Math.random() * 12) + 4;
+      if (progress > 100) progress = 100;
+      
+      document.getElementById('loader-fill').style.width = progress + '%';
+      
+      if (progress >= 30 && progress < 70) {
+        document.getElementById('status-label').innerText = "SECURING PORTAL PROTOCOLS...";
+      } else if (progress >= 70 && progress < 100) {
+        document.getElementById('status-label').innerText = "VERIFYING AUTHORIZATION KEYS...";
+      } else if (progress === 100) {
+        clearInterval(progressInterval);
+        
+        // সেশন চেক করে সঠিক ডিরেক্টরিতে রিডাইরেক্ট করা হচ্ছে
+        auth.onAuthStateChanged(user => {
+          if (user) {
+            window.location.href = 'home.html';
+          } else {
+            window.location.href = 'auth.html';
+          }
+        });
+      }
+    }, 100);
+  </script>
+</body>
+</html>
